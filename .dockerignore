@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.env
+database.json
+drive-token.json
+drive-credentials.json
+backups/
+.agent
+.gemini
+tmp

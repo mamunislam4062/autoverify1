@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Open Graph Meta Tags for Telegram Preview -->
+    <meta property="og:title" content="AutosVerify Bot 🎁 Free Rewards & Verification">
+    <meta property="og:description" content="🎁 Get free rewards and verify accounts!
+📰 News: @AutosVerify
+💰 Withdraw: @RiadAlMamun_Supporter  
+🤝 Support: @RiadAlMamun_Supporter">
+    <meta property="og:image" content="https://api.telegram.org/file/bot<YOUR_BOT_TOKEN>/photos/bot_icon.jpg">
+    <meta property="og:url" content="https://t.me/AutosVerify_bot">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="AutosVerify Bot">
+    
+    <!-- Twitter Card (also used by some platforms) -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AutosVerify Bot 🎁 Free Rewards & Verification">
+    <meta name="twitter:description" content="🎁 Get free rewards and verify accounts! Support: @RiadAlMamun_Supporter">
+    <meta name="twitter:image" content="https://api.telegram.org/file/bot<YOUR_BOT_TOKEN>/photos/bot_icon.jpg">
+    
+    <title>AutosVerify Bot - Free Rewards</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .bot-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 50px;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #f59e0b;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #94a3b8;
+            margin-bottom: 25px;
+        }
+        
+        .categories {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .category-item .icon {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .category-item a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .category-item a:hover {
+            color: #93c5fd;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            width: 100%;
+            padding: 15px 30px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 18px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+        
+        .loading {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #f59e0b;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .referral-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(245, 158, 11, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .referral-info p {
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="bot-icon">🤖</div>
+            <h1>AutosVerify Bot</h1>
+            <p class="subtitle">🎁 Free Rewards & Account Verification</p>
+            
+            <div class="categories">
+                <div class="category-item">
+                    <span class="icon">📰</span>
+                    <span>News: <a href="https://t.me/AutosVerify" target="_blank">@AutosVerify</a></span>
+                </div>
+                <div class="category-item">
+                    <span class="icon">💰</span>
+                    <span>Withdraw: <a href="https://t.me/RiadAlMamun_Supporter" target="_blank">@RiadAlMamun_Supporter</a></span>
+                </div>
+                <div class="category-item">
+                    <span class="icon">🤝</span>
+                    <span>Support: <a href="https://t.me/RiadAlMamun_Supporter" target="_blank">@RiadAlMamun_Supporter</a></span>
+                </div>
+            </div>
+            
+            <div class="referral-info" id="referralInfo" style="display: none;">
+                <p>You were invited by: <strong id="referrerName">Someone</strong></p>
+            </div>
+            
+            <a href="#" id="botLink" class="cta-button">
+                🤖 VIEW BOT
+            </a>
+            
+            <div class="loading" id="loading" style="display: none;">
+                <span class="spinner"></span>
+                Redirecting to bot...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get referral code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref') || urlParams.get('start') || '';
+        
+        // Build bot link with referral
+        let botLink = 'https://t.me/AutosVerify_bot';
+        if (refCode) {
+            botLink += `?start=${refCode}`;
+            
+            // Show referral info
+            document.getElementById('referralInfo').style.display = 'block';
+            document.getElementById('referrerName').textContent = refCode;
+        }
+        
+        // Set the button link
+        document.getElementById('botLink').href = botLink;
+        
+        // Auto-redirect after 3 seconds if user doesn't click
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            setTimeout(() => {
+                window.location.href = botLink;
+            }, 1500);
+        }, 3000);
+        
+        // Track referral for analytics (optional)
+        if (refCode) {
+            fetch('/api/track-referral', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    refCode: refCode,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent
+                })
+            }).catch(() => {}); // Silent fail
+        }
+    </script>
+</body>
+</html>

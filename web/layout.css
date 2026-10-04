@@ -1,0 +1,524 @@
+/**
+ * GLOBAL LAYOUT FIXES
+ * Ensures all pages stay within the main view container
+ */
+
+/* Main app container - enforce strict boundaries */
+#app {
+    max-width: 100vw;
+    width: 100%;
+    overflow-x: hidden;
+    position: relative;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+/* All pages must stay within container */
+.page {
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    position: relative;
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+/* Content body - prevent overflow */
+.content-body {
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 16px;
+    padding-bottom: 100px;
+}
+
+/* Daily Bonus Page Fixes */
+#dailyPage,
+#daily {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#dailyPage .content-body,
+#daily .content-body {
+    max-width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* Daily Bonus Header Card */
+#dailyPage .daily-header,
+#daily .daily-header,
+#dailyPage .bonus-header,
+#daily .bonus-header {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+}
+
+/* Daily Bonus Grid */
+#dailyPage .grid-3,
+#daily .grid-3,
+#dailyPage .daily-grid,
+#daily .daily-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+}
+
+/* Daily Cards */
+#dailyPage .bonus-card,
+#daily .bonus-card,
+#dailyPage .day-card,
+#daily .day-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 16px 8px;
+    text-align: center;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+#dailyPage .bonus-card.active,
+#daily .bonus-card.active,
+#dailyPage .day-card.claimed,
+#daily .day-card.claimed {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+}
+
+/* Day labels */
+#dailyPage .day-label,
+#daily .day-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+/* Token amounts */
+#dailyPage .token-amount,
+#daily .token-amount {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+}
+
+/* Big Reward Row */
+#dailyPage .big-reward,
+#daily .big-reward,
+#dailyPage .day-7-row,
+#daily .day-7-row {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+#dailyPage .big-reward .reward-text,
+#daily .big-reward .reward-text {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent-color);
+}
+
+/* Claim Button */
+#dailyPage .claim-btn,
+#daily .claim-btn,
+#dailyPage #claimButton,
+#daily #claimButton {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    border-radius: 50px;
+    color: #000;
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+    transition: all 0.3s ease;
+}
+
+#dailyPage .claim-btn:active,
+#daily .claim-btn:active {
+    transform: scale(0.98);
+}
+
+/* Responsive adjustments */
+@media (max-width: 380px) {
+
+    #dailyPage .content-body,
+    #daily .content-body {
+        padding: 12px;
+    }
+
+    #dailyPage .grid-3,
+    #daily .grid-3,
+    #dailyPage .daily-grid,
+    #daily .daily-grid {
+        gap: 10px;
+    }
+
+    #dailyPage .bonus-card,
+    #daily .bonus-card {
+        padding: 14px 6px;
+    }
+
+    #dailyPage .day-label,
+    #daily .day-label {
+        font-size: 10px;
+    }
+
+    #dailyPage .token-amount,
+    #daily .token-amount {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 320px) {
+
+    #dailyPage .grid-3,
+    #daily .grid-3,
+    #dailyPage .daily-grid,
+    #daily .daily-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+/* Verification Page Fixes */
+#verifyPage .content-body,
+#geminiVerificationPage .content-body,
+#verification .content-body {
+    max-width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* Video Downloader Page Fixes */
+#videoDownloaderPage .content-body {
+    max-width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* Email Pages Layout Fixes */
+#gmailPage .content-body,
+#hotmailPage .content-body,
+#studentEmailPage .content-body,
+#emailMenuPage .content-body {
+    max-width: 100%;
+    padding: 16px;
+    padding-bottom: 100px;
+    box-sizing: border-box;
+}
+
+/* Grid layouts - ensure proper fit */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 100%;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 100%;
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 480px) {
+    .daily-streak-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .ds-day.day-7 {
+        grid-column: 1 / -1;
+    }
+
+    .ds-day-icon {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .ds-day-reward {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .daily-streak-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .ds-day.day-7 {
+        grid-column: 1 / -1;
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Service cards container */
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 100%;
+}
+
+/* Ensure all elements respect container width */
+.page>*,
+.content-body>* {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Prevent images and media from overflowing */
+img,
+video,
+iframe,
+embed,
+object {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Card layouts */
+.card,
+.service-card,
+.bonus-card {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Inbox lists */
+.inbox-list,
+.message-list {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Button containers */
+.button-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.button-row button {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Text overflow prevention */
+.ellipsis,
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Header section fixes */
+.global-header,
+.page-header {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Bottom nav fixes */
+.bottom-nav {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ==========================================
+   COMPREHENSIVE OVERFLOW FIXES FOR ALL PAGES
+   ========================================== */
+
+/* AI Photo Generator Page Fixes */
+#aiPhotoGeneratorPage,
+#aiPhotoGeneratorPage .content-body {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+#aiPhotoGeneratorPage .content-body {
+    padding: 16px;
+}
+
+/* Redeem Page Fixes */
+#redeemPage,
+#redeemPage .content-body {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+#redeemPage .content-body {
+    padding: 16px;
+}
+
+/* Transfer Page Fixes */
+#transferPage .content-body {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 16px;
+}
+
+/* Item Sell Page Fixes */
+#itemSellPage .content-body {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 16px;
+}
+
+/* Accounts Store Page Fixes */
+#accountsStorePage .content-body {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    padding: 16px;
+}
+
+/* All service pages overflow fix */
+[id$="Page"] .content-body,
+[id$="Page"].page {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+/* Ensure all direct children of pages don't overflow */
+.page>div,
+.page>section,
+.page>article,
+.page>aside,
+.page>header,
+.page>footer,
+.page>main,
+.page>nav {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Fix for any element with inline width that might overflow */
+.page [style*="width:"] {
+    max-width: 100% !important;
+}
+
+/* Grid and flex container overflow fixes */
+.page .grid-2,
+.page .grid-3,
+.page .service-grid,
+.page .daily-grid {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Card overflow prevention on all pages */
+.page .card,
+.page .service-card,
+.page .bonus-card,
+.page .gv-card {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* Form elements overflow fix */
+.page input,
+.page textarea,
+.page select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Button overflow fix */
+.page button,
+.page .btn,
+.page .gv-btn {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Prevent horizontal scroll on all pages */
+.page {
+    overflow-x: hidden !important;
+}
+
+/* Main scroll container fix */
+#mainScroll {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+/* ==========================================
+   REDEEM PAGE SPECIFIC STYLES
+   ========================================== */
+
+#redeemPage {
+    padding: 8px !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+}
+
+#redeemPage .gv-card {
+    width: calc(100% - 16px) !important;
+    max-width: calc(100% - 16px) !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
+}
+
+#redeemPage .redeem-coupon-card {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#redeemPage #redeemCodeInput {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
