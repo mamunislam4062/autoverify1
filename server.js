@@ -15,7 +15,9 @@ const databaseModule = require('./database/server.js');
 const { app } = databaseModule;
 const db = require('./db.js');
 
-const PORT = 3000;
+// Railway injects PORT and proxies to whatever port we bind; fall back to 3000
+// so local `npm run dev` and docker-compose keep working unchanged.
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 
 async function startServer() {
   // Wait for database to be ready
