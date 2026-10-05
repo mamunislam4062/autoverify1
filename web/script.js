@@ -11938,7 +11938,242 @@ function copyNumOtp(otp) {
 }
 
 window.copyNumOtp = copyNumOtp;
-window.extractOtp = extractOtp;
+
+// =============================================
+// CLIENT-SIDE OTP EXTRACTION
+// Mirrors services/otp-extractor.js (the Node version) but returns a
+// plain code string, because the inbox UI consumes the result directly
+// as `code`. Keep the scoring weights in sync with the backend.
+//
+// ⚠ This function was referenced at top level before it existed. The
+// ReferenceError aborted the rest of this file, so Bot Hosting and
+// everything below never initialised. Never export an undefined symbol
+// at top level again — see the guarded export below.
+// =============================================
+const OTP_CONTEXT_KEYWORDS = [
+    'otp', 'one-time', 'one time', 'verification', 'verify', 'code',
+    'passcode', 'security code', 'login code', 'confirmation',
+    'auth', '2fa', 'authenticate', 'token', 'pin', 'temporary',
+    'access code', 'activation', 'reset', 'password reset',
+    'your code', 'your otp', 'enter code', 'use code',
+    'কোড', 'ভেরিফিকেশন' // Bengali support
+];
+
+const OTP_STRONG_PHRASES = [
+    'code is', 'otp is', 'otp:', 'code:', 'verification code',
+    'your code', 'confirmation code', 'security code', 'login code',
+    'passcode is', 'pin is', 'pin:', 'access code',
+    'your otp is', 'the code', 'use code', 'enter code',
+    'is your', 'here is your', 'please use', 'below is'
+];
+
+function otpPreprocess(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#(\d+);/g, (m, dec) => String.fromCharCode(dec))
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+}
+
+function otpNearKeyword(text, position, tokenLen, windowSize) {
+    const size = windowSize || 200;
+    const win = text.substring(
+        Math.max(0, position - size),
+        Math.min(text.length, position + tokenLen + size)
+    ).toLowerCase();
+    return OTP_CONTEXT_KEYWORDS.some(kw => win.includes(kw));
+}
+
+function otpAfterStrongPhrase(text, position) {
+    const before = text.substring(Math.max(0, position - 60), position).toLowerCase();
+    return OTP_STRONG_PHRASES.some(phrase => before.includes(phrase));
+}
+
+function otpShouldExclude(token, context, fullText) {
+    if (/^(19|20)\d{2}$/.test(token)) return true;
+
+    // Repeated template noise
+    const blacklist = ['98052', '94043', '98034', '94040', '95014', '12345', '00000', '11111', '99999'];
+    if (blacklist.indexOf(token) !== -1) {
+        const count = (fullText.match(new RegExp('\\b' + token + '\\b', 'g')) || []).length;
+        if (count > 2) return true;
+    }
+
+    const at = context.indexOf(token);
+    if (at === -1) return false;
+    const before = context.substring(0, at);
+    const after = context.substring(at + token.length, at + token.length + 30);
+
+    // Part of a time (e.g. 10:30)
+    if (/:\s*$/.test(before) || new RegExp('^' + token + '\\s*:').test(context)) {
+        if (/^\d{3,4}$/.test(token)) return true;
+    }
+
+    // Currency amount
+    if (/(\$|usd|tk|৳|credits?|cost|price|amount|balance|rs\.?|inr)/i.test(context)) {
+        if (new RegExp('(\\$|usd|tk|৳|rs\\.?)\\s*' + token).test(context)) return true;
+    }
+
+    // Street / address number
+    if (/\b(street|road|ave|avenue|blvd|boulevard|lane|drive|way|park|court|plaza|square)\b/i.test(after)) {
+        return true;
+    }
+
+    // Inside a URL or email address
+    const around = context.substring(Math.max(0, at - 30), at + token.length + 30);
+    if (/(https?:\/\/|www\.|\.[a-z]{2,4}\/|@)/i.test(around)) return true;
+
+    // Ordinary words
+    if (/^[A-Za-z]+$/.test(token)) {
+        const commonWords = ['code', 'from', 'date', 'time', 'mail', 'email',
+            'best', 'team', 'your', 'this', 'that', 'with', 'have', 'here', 'link',
+            'dear', 'hello', 'please', 'click', 'below'];
+        if (commonWords.indexOf(token.toLowerCase()) !== -1) return true;
+    }
+
+    return false;
+}
+
+function otpScore(token, position, type, fullText) {
+    let score = 0;
+
+    if (type === 'digit') score += 80;
+    else if (type === 'alphanumeric') score += 50;
+    else if (type === 'spaced') score += 60;
+
+    if (otpNearKeyword(fullText, position, token.length)) score += 90;
+    if (otpAfterStrongPhrase(fullText, position)) score += 180;
+
+    // Sitting alone on its own line
+    const lines = fullText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (trimmed === token || trimmed === token.replace(/[\s-]/g, '')) { score += 60; break; }
+    }
+
+    if (token.length === 6 && type === 'digit') score += 40;
+    else if (token.length === 4 && type === 'digit') score += 20;
+    else if (token.length >= 8) score += 10;
+
+    if (/^G-\d+$/.test(token) || /^[A-Z0-9]{8,16}$/.test(token)) score += 30;
+
+    const context = fullText.substring(
+        Math.max(0, position - 150),
+        Math.min(fullText.length, position + token.length + 150)
+    ).toLowerCase();
+
+    if (/received|sent|date|time|pm|am|timestamp|expires?|expiry|valid until/i.test(context)) score -= 40;
+    if (/(https?:\/\/|www\.|@)/i.test(context)) score -= 50;
+
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const count = (fullText.match(new RegExp('\\b' + escaped + '\\b', 'g')) || []).length;
+    if (count > 3) score -= 80;
+
+    if (context.length > 250 && !OTP_CONTEXT_KEYWORDS.some(kw => context.includes(kw))) score -= 50;
+
+    return score;
+}
+
+/**
+ * @param {string} text      Email subject + body
+ * @param {string} [subject] Optional subject line, scored higher
+ * @returns {string|null}    The OTP code, or null when nothing is confident
+ */
+function extractOtp(text, subject) {
+    const full = otpPreprocess(text);
+    const subj = otpPreprocess(subject);
+    const combined = subj ? subj + '\n\n' + full : full;
+
+    if (!combined) return null;
+
+    const candidates = [];
+    let match;
+
+    // 1) Plain digits
+    const digitRe = /\b(\d{3,16})\b/g;
+    while ((match = digitRe.exec(combined)) !== null) {
+        const token = match[1];
+        const position = match.index;
+        const charBefore = position > 0 ? combined[position - 1] : '';
+        if (charBefore === '.') continue;                       // version / decimal part
+        if (token.length >= 10 && !otpNearKeyword(combined, position, token.length, 100)) continue;
+
+        const ctx = combined.substring(Math.max(0, position - 60), Math.min(combined.length, position + token.length + 60));
+        if (otpShouldExclude(token, ctx, combined)) continue;
+        candidates.push({ token, score: otpScore(token, position, 'digit', combined) });
+    }
+
+    // 2) Alphanumeric codes that mix letters and digits
+    const alnumRe = /\b([A-Z0-9]{4,16})(?![a-z])\b/gi;
+    while ((match = alnumRe.exec(combined)) !== null) {
+        const token = match[1].toUpperCase();
+        if (!/[A-Z]/.test(token) || !/\d/.test(token)) continue;
+        const position = match.index;
+        const ctx = combined.substring(Math.max(0, position - 60), Math.min(combined.length, position + token.length + 60));
+        if (otpShouldExclude(token, ctx, combined)) continue;
+        candidates.push({ token, score: otpScore(token, position, 'alphanumeric', combined) });
+    }
+
+    // 3) Prefixed codes such as G-123456 / #123456
+    const prefixRe = /\b([A-Z]-\d{4,10}|#\d{4,10})\b/gi;
+    while ((match = prefixRe.exec(combined)) !== null) {
+        const token = match[1].toUpperCase();
+        candidates.push({ token, score: otpScore(token, match.index, 'alphanumeric', combined) + 100 });
+    }
+
+    // 4) Spaced / dashed codes such as "1234 5678".
+    //    Digits only — allowing letters matched prose, e.g. "12/03/2026 AT 10:30"
+    //    produced "2026AT10". Prefixed letter codes are handled in step 3.
+    const spacedRe = /\b(?:[A-Z0-9]{2,5}[- ]){1,6}[A-Z0-9]{2,5}\b/gi;
+    while ((match = spacedRe.exec(combined)) !== null) {
+        const token = match[0].replace(/[\s-]/g, '').toUpperCase();
+        if (token.length < 4 || token.length > 20 || !/^\d+$/.test(token)) continue;
+        const position = match.index;
+        const ctx = combined.substring(Math.max(0, position - 60), Math.min(combined.length, position + token.length + 60));
+        if (otpShouldExclude(token, ctx, combined)) continue;
+        candidates.push({ token, score: otpScore(token, position, 'digit', combined) });
+    }
+
+    if (candidates.length === 0) return null;
+
+    candidates.sort((a, b) => b.score - a.score);
+
+    // Keep the first occurrence of each distinct code
+    const seen = {};
+    const unique = [];
+    for (let i = 0; i < candidates.length; i++) {
+        const key = candidates[i].token.toUpperCase();
+        if (seen[key]) continue;
+        seen[key] = true;
+        unique.push(candidates[i]);
+    }
+
+    // Subject-line codes are very reliable
+    if (subj) {
+        const subjLower = subj.toLowerCase();
+        for (let i = 0; i < unique.length; i++) {
+            if (subjLower.includes(unique[i].token.toLowerCase())) {
+                unique[i].score += 130;
+                if (OTP_CONTEXT_KEYWORDS.some(kw => subjLower.includes(kw))) unique[i].score += 80;
+            }
+        }
+        unique.sort((a, b) => b.score - a.score);
+    }
+
+    const best = unique[0];
+    return (best && best.score >= 40) ? best.token : null;
+}
+
+// Guarded export: a top-level ReferenceError here silently kills every
+// statement that comes after it in this file.
+window.extractOtp = (typeof extractOtp === 'function') ? extractOtp : function () { return null; };
 
 // =============================================
 // LIVE PAGES — Routing & Titles

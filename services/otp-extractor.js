@@ -324,7 +324,10 @@ function extractOTP(emailText, subject = '') {
         const token = original.replace(/[\s-]/g, '').toUpperCase();
         const position = match.index;
 
-        if (token.length >= 4 && token.length <= 20 && /\d/.test(token)) {
+        // Digits only. Allowing letters here let ordinary prose match, e.g.
+        // "Meeting 12/03/2026 AT 10:30" produced the bogus code "2026AT10".
+        // Prefixed letter codes (G-123456) are already handled in phase 3.
+        if (token.length >= 4 && token.length <= 20 && /^\d+$/.test(token)) {
             const contextSnippet = combinedText.substring(
                 Math.max(0, position - 60),
                 Math.min(combinedText.length, position + token.length + 60)
