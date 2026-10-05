@@ -270,6 +270,21 @@
             display: block !important;
         }
 
+        /* Full-screen pages (siblings of .main-scroll) are position:fixed, so their
+           containing block is the VIEWPORT — not #app-container. Without this they
+           stretch across the whole desktop window and break the phone layout.
+           left/right:0 + max-width + auto margins keeps them centered inside the
+           same 450px column the rest of the app uses. */
+        #app-container > .page {
+            left: 0 !important;
+            right: 0 !important;
+            width: auto !important;
+            max-width: 450px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            box-sizing: border-box !important;
+        }
+
         /* Main scroll area — only this scrolls */
         .main-scroll {
             flex: 1 !important;
@@ -5582,7 +5597,7 @@
 
         <!-- PYROGRAM PAGE -->
         <div id="pyrogramPage" class="page">
-            <div class="content-body" style="padding: 0 16px 100px 16px;">
+            <div class="content-body" style="max-width:430px; margin:0 auto; box-sizing:border-box; padding: 0 16px 100px 16px;">
                 <!-- Header -->
                 <div style="background:linear-gradient(135deg,rgba(14,165,233,0.18),rgba(2,132,199,0.12)); border:1px solid rgba(14,165,233,0.35); border-radius:20px; padding:18px 18px 14px 18px; margin-top:16px; margin-bottom:16px;">
                     <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
@@ -5616,13 +5631,77 @@
                     </p>
 
                     <!-- Inputs -->
-                    <div style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#fef08a; line-height:1.5;">
-                        <div style="font-weight:800; color:#eab308; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-                            <i class="fas fa-lightbulb text-yellow-400"></i> Code Receipt Instructions (Important):
+                    <!-- Help: collapsed by default — expanded only when the user needs it -->
+                    <div id="pyroHelpBox"
+                        style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.25); border-radius:14px; margin-bottom:16px; overflow:hidden;">
+
+                        <button type="button" onclick="toggleSection('pyroHelpBody')"
+                            style="width:100%; display:flex; align-items:center; gap:10px; padding:12px 14px; background:none; border:none; cursor:pointer; text-align:left;">
+                            <span
+                                style="flex-shrink:0; width:28px; height:28px; border-radius:9px; background:rgba(234,179,8,0.16); display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:12px;">
+                                <i class="fas fa-lightbulb"></i>
+                            </span>
+                            <span style="flex:1; min-width:0;">
+                                <span style="display:block; font-size:12px; font-weight:800; color:#fde68a;">Code not arriving?</span>
+                                <span style="display:block; font-size:10px; font-weight:600; color:rgba(253,230,138,0.6); margin-top:1px;">Tap
+                                    for help</span>
+                            </span>
+                            <i id="pyroHelpBody_icon" class="fas fa-chevron-down"
+                                style="flex-shrink:0; color:rgba(253,230,138,0.7); font-size:12px; transition:transform 0.25s ease;"></i>
+                        </button>
+
+                        <div id="pyroHelpBody"
+                            style="display:none; flex-direction:column; gap:12px; padding:2px 14px 14px 14px;">
+
+                            <div style="display:flex; gap:10px; align-items:flex-start;">
+                                <span
+                                    style="flex-shrink:0; width:26px; height:26px; border-radius:8px; background:rgba(234,179,8,0.16); display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:11px;">
+                                    <i class="fas fa-mobile-screen"></i>
+                                </span>
+                                <div style="min-width:0;">
+                                    <div style="font-size:12px; font-weight:800; color:#fde68a; margin-bottom:3px;">Check the Telegram app
+                                    </div>
+                                    <div style="font-size:11px; font-weight:500; color:rgba(254,240,138,0.75); line-height:1.55;">The 5-digit
+                                        login code is sent as an in-app message from <b>"Telegram"</b>. It may never
+                                        arrive by SMS.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="height:1px; background:rgba(234,179,8,0.18);"></div>
+
+                            <div style="display:flex; gap:10px; align-items:flex-start;">
+                                <span
+                                    style="flex-shrink:0; width:26px; height:26px; border-radius:8px; background:rgba(234,179,8,0.16); display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:11px;">
+                                    <i class="fas fa-key"></i>
+                                </span>
+                                <div style="min-width:0;">
+                                    <div style="font-size:12px; font-weight:800; color:#fde68a; margin-bottom:3px;">API ID / Hash are
+                                        optional
+                                    </div>
+                                    <div style="font-size:11px; font-weight:500; color:rgba(254,240,138,0.75); line-height:1.55;">Leave both
+                                        fields blank and official Telegram app credentials are used
+                                        automatically.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="height:1px; background:rgba(234,179,8,0.18);"></div>
+
+                            <div style="display:flex; gap:10px; align-items:flex-start;">
+                                <span
+                                    style="flex-shrink:0; width:26px; height:26px; border-radius:8px; background:rgba(234,179,8,0.16); display:flex; align-items:center; justify-content:center; color:#fbbf24; font-size:11px;">
+                                    <i class="fas fa-globe"></i>
+                                </span>
+                                <div style="min-width:0;">
+                                    <div style="font-size:12px; font-weight:800; color:#fde68a; margin-bottom:3px;">Phone format
+                                    </div>
+                                    <div style="font-size:11px; font-weight:500; color:rgba(254,240,138,0.75); line-height:1.55;">Always include
+                                        your country code — e.g. +8801712345678.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        • <b>Check Telegram App:</b> The 5-digit login code is sent as an official in-app message from <b>"Telegram"</b> inside your mobile app (it may not arrive via SMS).<br>
-                        • <b>API ID / Hash Optional:</b> Leave blank to automatically use official Telegram app credentials.<br>
-                        • <b>Phone Format:</b> Enter phone number with country code (e.g., +8801712345678).
                     </div>
 
                     <div style="margin-bottom:12px;">
@@ -5669,11 +5748,33 @@
                             </div>
 
                             <!-- Helpful Notice Box for Users -->
-                            <div style="background:rgba(14,165,233,0.12); border:1px solid rgba(14,165,233,0.35); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:#e0f2fe; line-height:1.5;">
-                                <div style="font-weight:800; color:#38bdf8; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-                                    <i class="fas fa-info-circle text-sky-400"></i> Where to find the code?
+                            <div id="pyroFindCodeBox"
+                                style="background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:14px; padding:13px 14px; margin-bottom:14px;">
+                                <div
+                                    style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:#38bdf8; margin-bottom:7px;">
+                                    <i class="fas fa-info-circle"></i> Where to find the code?
                                 </div>
-                                Your 5-digit login code has been sent as an official notification inside the <b>Telegram App</b> on your phone in the official <b>'Telegram'</b> chat. Please open the <b>Telegram</b> app on your phone, check your chat messages, and enter the code below.
+                                <div style="font-size:11px; font-weight:500; color:rgba(224,242,254,0.8); line-height:1.55; margin-bottom:10px;">
+                                    The 5-digit code arrives inside the Telegram app — as a message from
+                                    the official <b>"Telegram"</b> chat. It may never come by SMS.
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:7px;">
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <span
+                                            style="flex-shrink:0; width:17px; height:17px; border-radius:50%; background:rgba(56,189,248,0.22); color:#7dd3fc; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center;">1</span>
+                                        <span style="font-size:11px; font-weight:600; color:#e0f2fe;">Open the Telegram app</span>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <span
+                                            style="flex-shrink:0; width:17px; height:17px; border-radius:50%; background:rgba(56,189,248,0.22); color:#7dd3fc; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center;">2</span>
+                                        <span style="font-size:11px; font-weight:600; color:#e0f2fe;">Open the "Telegram" chat</span>
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <span
+                                            style="flex-shrink:0; width:17px; height:17px; border-radius:50%; background:rgba(56,189,248,0.22); color:#7dd3fc; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+                                        <span style="font-size:11px; font-weight:600; color:#e0f2fe;">Type the code in the box below</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div style="margin-bottom:12px;">
@@ -5734,7 +5835,7 @@
         
                 
         <div id="botHostingPage" class="page">
-            <div class="content-body" style="padding: 0 16px 100px 16px;">
+            <div class="content-body" style="max-width:430px; margin:0 auto; box-sizing:border-box; padding: 0 16px 100px 16px;">
 
                 <!-- Header -->
                 <div
@@ -6092,7 +6193,7 @@
 
         <!-- Redeem Token Page -->
         <div id="redeemPage" class="page" style="display:none;">
-            <div style="padding: 0 16px;">
+            <div style="max-width:430px; margin:0 auto; padding: 0 16px 100px 16px; box-sizing:border-box;">
                 <div class="gv-card">
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
                         <div
@@ -6354,6 +6455,7 @@
         </div>
 
         <div id="accountDetailPage" class="page">
+            <div style="max-width:430px; margin:0 auto; padding:0 16px 100px 16px; box-sizing:border-box;">
             <div id="accountDetailContent">
                 <div style="text-align:center; padding:40px 0; color:var(--text-sub);"><i class="fas fa-spinner fa-spin"
                         style="font-size:24px;"></i>
@@ -6364,10 +6466,12 @@
                 style="margin-top:20px; width:100%; padding:15px; border-radius:14px; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--border-color); font-weight:700;">
                 BACK TO ACCOUNTS
             </button>
+            </div>
         </div>
 
         <!-- ADMIN PAGE -->
         <div id="adminPage" class="page">
+            <div style="max-width:430px; margin:0 auto; padding:0 16px 100px 16px; box-sizing:border-box;">
             <div class="section-title">ADMIN CONTROL PANEL</div>
 
             <div class="ref-card"
@@ -6469,6 +6573,7 @@
                     onclick="adminResetAction('logs')">
                     <i class="fas fa-terminal"></i> CLEAR SERVER LOGS
                 </button>
+            </div>
             </div>
         </div>
 
@@ -7645,7 +7750,7 @@
 
         <!-- Video Download Page -->
         <div id="videoDownloadPage" class="page">
-            <div class="content-body" style="padding:20px; padding-bottom:140px; box-sizing:border-box; max-width:100%; overflow:hidden;">
+            <div class="content-body" style="max-width:430px; margin:0 auto; padding:20px; padding-bottom:140px; box-sizing:border-box; overflow:hidden;">
                 <div class="adc-header" style="margin-bottom: 24px; text-align:center;">
                     <div
                         style="width:70px; height:70px; background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
@@ -8011,7 +8116,7 @@
 
         <!-- LIVEGRAM SUPPORT BOT PAGE -->
         <div id="liveSmsBotPage" class="page" style="display:none;">
-            <div class="content-body" style="padding: 0 16px 120px 16px; max-width: 480px; margin: 0 auto;">
+            <div class="content-body" style="padding: 0 16px 120px 16px; max-width: 430px; margin: 0 auto; box-sizing:border-box;">
 
                 <!-- Header -->
                 <div

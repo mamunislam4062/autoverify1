@@ -370,6 +370,265 @@
                 padding-left: 64px !important;
             }
         }
+
+        /* ==========================================================
+           MOBILE VIEWPORT ENFORCEMENT
+           The admin panel renders inside a phone-width frame, so the
+           desktop layout must be switched off at EVERY screen size:
+           - the frame is capped at 450px and centred
+           - the sidebar becomes a drawer inside the frame
+           Tailwind's sm/md/lg/xl breakpoints key off the browser
+           window (not the frame), so those utilities are neutralised
+           further down to keep every page single-column.
+           ========================================================== */
+        body {
+            display: flex !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+        }
+
+        #app-container {
+            max-width: 450px !important;
+            margin: 0 auto !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.06) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* ---- SIDEBAR: icon rail <-> full drawer, both inside the frame ---- */
+        #app-container {
+            --rail-w: 68px;
+        }
+
+        aside {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: var(--rail-w) !important;
+            max-width: none !important;
+            transform: translateX(0) !important;
+            box-shadow: none !important;
+            transition: width 0.28s ease, box-shadow 0.28s ease;
+        }
+
+        /* Icon rail (default) — reuses the existing icons-only rules */
+        aside[data-collapsed] {
+            width: var(--rail-w) !important;
+        }
+
+        aside[data-collapsed] nav {
+            padding: 8px !important;
+        }
+
+        /* Category headings become thin dividers so the rail reads as groups */
+        aside[data-collapsed] .sidebar-category-title {
+            display: block !important;
+            height: 1px;
+            padding: 0 !important;
+            margin: 12px 10px !important;
+            font-size: 0;
+            background: rgba(255, 255, 255, 0.09);
+            overflow: hidden;
+        }
+
+        /* Submenus cannot be read in the rail, so keep them shut */
+        aside[data-collapsed] .sidebar-submenu {
+            display: none !important;
+        }
+
+        /* Rail-only expander */
+        .sidebar-rail-btn {
+            display: none !important;
+        }
+
+        aside[data-collapsed] .sidebar-rail-btn {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 14px 0;
+            background: none;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            font-size: 15px;
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        aside[data-collapsed] .sidebar-rail-btn:hover {
+            color: var(--accent-color, #fbbf24);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        /* Full sidebar slides over the content as a drawer */
+        #app-container[data-sidebar="full"] aside {
+            width: var(--sidebar-width) !important;
+            box-shadow: 18px 0 60px rgba(0, 0, 0, 0.65) !important;
+        }
+
+        /* Content sits beside the rail, and under the drawer when open */
+        main,
+        body:has(aside[data-collapsed]) main {
+            padding-left: var(--rail-w) !important;
+        }
+
+        #app-container[data-sidebar="full"] main {
+            padding-left: 0 !important;
+        }
+
+        /* Overlay covers the frame (not the window) and only while open */
+        .sidebar-overlay {
+            position: absolute !important;
+        }
+
+        #app-container:not([data-sidebar="full"]) #sidebarOverlay {
+            display: none !important;
+        }
+
+        #app-container[data-sidebar="full"] #sidebarOverlay {
+            display: block !important;
+        }
+
+        /* Burger reflects the sidebar state */
+        #mobileMenuBtn {
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        #mobileMenuBtn.sidebar-open {
+            background: rgba(14, 165, 233, 0.35) !important;
+            border-color: rgba(59, 130, 246, 0.6) !important;
+        }
+
+        /* Rail keeps the frame edge clean */
+        aside[data-collapsed] .nav-item {
+            justify-content: center !important;
+            padding: 11px 0 !important;
+            gap: 0 !important;
+        }
+
+        /* Button rows must wrap inside the narrow column instead of overflowing */
+        #app-container button {
+            max-width: 100% !important;
+        }
+
+        #app-container .flex.gap-1,
+        #app-container .flex.gap-2,
+        #app-container .flex.gap-3,
+        #app-container .flex.gap-4 {
+            flex-wrap: wrap !important;
+        }
+
+        #app-container .flex.gap-2>button,
+        #app-container .flex.gap-3>button,
+        #app-container .flex.gap-4>button {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+        }
+
+        /* Tooltip so icon-only items stay understandable */
+        aside[data-collapsed] .nav-item[title] {
+            position: relative;
+        }
+
+        aside[data-collapsed] .nav-item[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0f172a;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 9px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            white-space: nowrap;
+            z-index: 10000;
+            pointer-events: none;
+        }
+
+        /* main must never exceed the frame */
+        main {
+            max-width: 100% !important;
+        }
+
+        /* ---- Tailwind desktop breakpoints -> phone layout ---- */
+
+        /* every multi-column grid collapses to one column */
+        #app-container [class*="grid-cols-"]:is([class*="sm:"], [class*="md:"],
+            [class*="lg:"], [class*="xl:"]) {
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        /* grid items always take the full row.
+           NB: grid-column takes exactly two values — start / end. */
+        #app-container [class*="col-span-"] {
+            grid-column: auto / span 1 !important;
+        }
+
+        /* desktop padding is too wide for a 450px column */
+        #app-container [class*="md:p-"] {
+            padding: 1rem !important;
+        }
+
+        #app-container [class*="md:px-"] {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        #app-container [class*="sm:mx-"] {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        /* oversized headings */
+        #app-container [class*="md:text-4xl"] {
+            font-size: 1.5rem !important;
+        }
+
+        #app-container [class*="md:text-2xl"] {
+            font-size: 1.125rem !important;
+        }
+
+        /* stacked side-by-side blocks become vertical */
+        #app-container [class*="md:flex-row"] {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+        #app-container [class*="md:items-center"] {
+            align-items: flex-start !important;
+        }
+
+        #app-container [class*="md:gap-"] {
+            gap: 0.75rem !important;
+        }
+
+        /* desktop-only heights must not fight the scroll container */
+        #app-container [class*="lg:h-full"],
+        #app-container [class*="lg:h-["] {
+            height: auto !important;
+        }
+
+        /* hide blocks that are desktop-only */
+        #app-container .hidden.md\:block,
+        #app-container .hidden.xl\:flex {
+            display: none !important;
+        }
+
+        /* Modals are position:fixed over the whole window, so cap the card
+           width to the same column the rest of the panel uses. */
+        .modal-overlay>* {
+            max-width: 430px !important;
+            max-height: 92vh !important;
+        }
+
+        .modal-body {
+            max-width: 100% !important;
+        }
     </style>
 </head>
 
@@ -458,6 +717,11 @@
 
         <!-- SIDEBAR -->
         <aside class="flex flex-col p-0">
+            <!-- Rail-only expander (hidden while the full sidebar is open) -->
+            <button id="sidebarRailExpand" type="button" onclick="adminToggleSidebar()"
+                class="sidebar-rail-btn" title="Open full menu">
+                <i class="fas fa-angles-right"></i>
+            </button>
             <!-- Header Branding -->
             <div class="p-5 flex items-center gap-3 border-b border-white/5 bg-white/[0.02] sidebar-bot-name-wrap">
                 <div class="w-9 h-9 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-slate-950 font-black shadow-lg shadow-orange-500/20 shrink-0">
@@ -515,7 +779,7 @@
                     <span class="flex items-center gap-2.5"><i class="fas fa-rocket w-4 text-purple-400"></i> <span class="nav-label">Hosting Hub</span></span>
                     <i class="fas fa-chevron-down text-[10px] transition-transform duration-200 opacity-70 nav-label" id="hosting-group-chevron"></i>
                 </div>
-                <div id="hosting-group" class="space-y-0.5 pl-3 border-l border-purple-500/20 ml-3 my-0.5">
+                <div id="hosting-group" class="sidebar-submenu space-y-0.5 pl-3 border-l border-purple-500/20 ml-3 my-0.5">
                     <div class="nav-item text-xs" onclick="nav('bothosting')">
                         <i class="fas fa-rocket w-4 text-purple-400"></i>
                         <span class="nav-label">Bot Hosting</span>
@@ -601,7 +865,7 @@
                     <span class="flex items-center gap-2.5"><i class="fas fa-gears w-4 text-amber-400"></i> <span class="nav-label">Settings</span></span>
                     <i class="fas fa-chevron-down text-[10px] transition-transform duration-200 opacity-70 nav-label" id="settings-group-chevron"></i>
                 </div>
-                <div id="settings-group" class="space-y-0.5 pl-3 border-l border-amber-500/20 ml-3 my-0.5">
+                <div id="settings-group" class="sidebar-submenu space-y-0.5 pl-3 border-l border-amber-500/20 ml-3 my-0.5">
                     <div class="nav-item text-xs" onclick="nav('settings')" id="settings-menu">
                         <i class="fas fa-gears w-4 text-orange-400"></i>
                         <span class="nav-label">General Settings</span>
@@ -6628,54 +6892,100 @@
                 : '<i class="fas fa-sun text-amber-400 text-sm"></i>';
         }
 
-        function toggleSidebarCollapse() {
+        /* ==========================================================
+           SIDEBAR — two states inside the phone-width frame
+             rail : icons only, always visible (default)
+             full : complete sidebar, slides over the content
+           ========================================================== */
+        function applySidebarState(mode) {
+            var app = document.getElementById('app-container');
             var aside = document.querySelector('aside');
-            if (!aside) return;
-            var collapsed = aside.hasAttribute('data-collapsed');
-            if (collapsed) {
+            if (!app || !aside) return;
+
+            var isFull = mode === 'full';
+            app.setAttribute('data-sidebar', isFull ? 'full' : 'rail');
+
+            if (isFull) {
                 aside.removeAttribute('data-collapsed');
-                localStorage.setItem('sidebarCollapsed', '0');
-                var icon = document.getElementById('sidebarCollapseIcon');
-                if (icon) { icon.className = 'fas fa-chevron-left text-[10px] text-gray-400'; }
-                // Update main padding for browsers without :has() support
-                if (window.innerWidth >= 1025) {
-                    var mainEl = document.querySelector('main');
-                    if (mainEl) mainEl.style.paddingLeft = 'var(--sidebar-width)';
-                }
             } else {
                 aside.setAttribute('data-collapsed', '');
-                localStorage.setItem('sidebarCollapsed', '1');
-                var icon = document.getElementById('sidebarCollapseIcon');
-                if (icon) { icon.className = 'fas fa-chevron-right text-[10px] text-gray-400'; }
-                // Update main padding for browsers without :has() support
-                if (window.innerWidth >= 1025) {
-                    var mainEl = document.querySelector('main');
-                    if (mainEl) mainEl.style.paddingLeft = '64px';
-                }
             }
+
+            var overlay = document.getElementById('sidebarOverlay');
+            if (overlay) overlay.classList.toggle('active', isFull);
+
+            var burger = document.getElementById('mobileMenuBtn');
+            if (burger) burger.classList.toggle('sidebar-open', isFull);
+
+            var chev = document.getElementById('sidebarCollapseIcon');
+            if (chev) {
+                chev.className = isFull
+                    ? 'fas fa-chevron-left text-[10px] text-gray-400'
+                    : 'fas fa-chevron-right text-[10px] text-gray-400';
+            }
+
+            // Desktop fallback: clear any legacy inline padding
+            var mainEl = document.querySelector('main');
+            if (mainEl) mainEl.style.paddingLeft = '';
+
+            // Icons alone are ambiguous — mirror each label into a tooltip
+            aside.querySelectorAll('.nav-item').forEach(function (item) {
+                var label = item.querySelector('.nav-label');
+                if (label && label.textContent.trim()) {
+                    item.setAttribute('title', label.textContent.trim());
+                }
+            });
+
+            localStorage.setItem('sidebarMode', isFull ? 'full' : 'rail');
         }
 
-        // Restore sidebar collapse state on load
+        window.adminToggleSidebar = function () {
+            var app = document.getElementById('app-container');
+            if (!app) return;
+            applySidebarState(app.getAttribute('data-sidebar') === 'full' ? 'rail' : 'full');
+        };
+
+        // The in-sidebar chevron drives the same two states
+        function toggleSidebarCollapse() {
+            window.adminToggleSidebar();
+        }
+
+        // Restore sidebar state on load — icon rail is the default
         document.addEventListener('DOMContentLoaded', function() {
-            if (localStorage.getItem('sidebarCollapsed') === '1') {
-                var aside = document.querySelector('aside');
-                if (aside) aside.setAttribute('data-collapsed', '');
-                var icon = document.getElementById('sidebarCollapseIcon');
-                if (icon) icon.className = 'fas fa-chevron-right text-[10px] text-gray-400';
-            }
-            // Apply correct main padding on load for desktop
-            if (window.innerWidth >= 1025) {
-                var mainEl = document.querySelector('main');
-                var isCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
-                if (mainEl) mainEl.style.paddingLeft = isCollapsed ? '64px' : 'var(--sidebar-width)';
-            }
+            var saved = localStorage.getItem('sidebarMode');
+            applySidebarState(saved === 'full' ? 'full' : 'rail');
+
+            wrapBareTables();
+
             // Update theme toggle icon based on saved theme
-            var saved = localStorage.getItem('adminTheme') || 'dark';
+            var theme = localStorage.getItem('adminTheme') || 'dark';
             var btn = document.getElementById('themeToggle');
-            if (btn) btn.innerHTML = saved === 'dark'
+            if (btn) btn.innerHTML = theme === 'dark'
                 ? '<i class="fas fa-moon text-blue-400 text-sm"></i>'
                 : '<i class="fas fa-sun text-amber-400 text-sm"></i>';
         });
+
+        // Wide data tables need their own horizontal scroll container,
+        // otherwise they push the whole narrow page sideways.
+        function wrapBareTables() {
+            var app = document.getElementById('app-container');
+            if (!app) return;
+            app.querySelectorAll('table').forEach(function (table) {
+                var parent = table.parentElement;
+                if (!parent) return;
+                var ox = window.getComputedStyle(parent).overflowX;
+                if (ox === 'auto' || ox === 'scroll') return;   // already scrollable
+                if (table.dataset.scrollWrapped === '1') return;
+                var wrap = document.createElement('div');
+                wrap.className = 'table-responsive-wrapper';
+                wrap.style.width = '100%';
+                wrap.style.overflowX = 'auto';
+                wrap.style.webkitOverflowScrolling = 'touch';
+                parent.insertBefore(wrap, table);
+                wrap.appendChild(table);
+                table.dataset.scrollWrapped = '1';
+            });
+        }
     </script>
 
     <script>
@@ -8827,19 +9137,13 @@
             }
         }
 
-        // MOBILE MENU FUNCTIONS
+        // MOBILE MENU FUNCTIONS — delegate to the rail <-> full sidebar states
         function toggleMobileMenu() {
-            const sidebar = document.querySelector('aside');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('mobile-open');
-            overlay.classList.toggle('active');
+            window.adminToggleSidebar();
         }
 
         function closeMobileMenu() {
-            const sidebar = document.querySelector('aside');
-            const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
+            applySidebarState('rail');
         }
 
         function toggleItemSalesSubmenu() {
