@@ -5890,96 +5890,133 @@ app.get('/api/admin/group-settings', (req, res) => {
 });
 
 // API: Admin - Live Stream Assistant Action Control
+// ---------------------------------------------------------------------------
+// Live Stream Assistant
+//
+// Real streaming happens in the Python worker (services/livestream):
+// Pyrogram joins the chat, PyTgCalls joins the group call and pipes audio
+// into it, yt-dlp resolves the track to a real audio stream. This layer only
+// proxies to that worker and reports honestly when it is not installed - it
+// never claims a join or a stream that did not happen.
+// ---------------------------------------------------------------------------
+const livestreamBridge = require('../services/livestream-bridge');
+
+function lsTargetChat(chatId) {
+    const explicit = livestreamBridge.parseChatId(chatId);
+    if (explicit !== null) return explicit;
+    const fromKeys = db.data.apiKeys || {};
+    const byChannel = livestreamBridge.parseChatId(fromKeys.requiredChannel);
+    if (byChannel !== null) return byChannel;
+    return livestreamBridge.parseChatId(fromKeys.requiredGroup);
+}
+
 app.post('/api/admin/livestream-assistant/action', async (req, res) => {
     try {
-        const { action, query, chatId } = req.body;
-        const settings = db.getGroupSettings() || {};
-        const isEnabled = settings.userbotEnabled !== false;
+        const body = req.body || {};
+        const action = body.action;
+        const settings = db.getGroupSettings() || db.data.adminSettings?.groupManagement || {};
 
-        if (!isEnabled) {
-            return res.json({ success: false, message: 'Live Stream Assistant is disabled in settings. Please toggle it ON first.' });
+        if (settings.userbotEnabled === false) {
+            return res.json({
+                success: false,
+                message: 'Live Stream Assistant is switched off. Turn it on in Groups & Moderation first.',
+            });
         }
 
-        let targetChat = chatId;
-        if (!targetChat && db.data.apiKeys?.requiredChannel) {
-            targetChat = db.data.apiKeys.requiredChannel;
-        }
-        if (!targetChat && db.data.apiKeys?.requiredGroup) {
-            targetChat = db.data.apiKeys.requiredGroup;
+        const target = lsTargetChat(body.chatId);
+        if (target === null) {
+            return res.json({
+                success: false,
+                message: 'No target chat. Pick a group or channel in Stream Target & Controls, '
+                    + 'or set a default required channel/group.',
+            });
         }
 
-        if (chatId) {
+        // Remember the chosen target so the next action reuses it.
+        if (body.chatId) {
             if (!db.data.adminSettings) db.data.adminSettings = {};
-            db.data.adminSettings.liveStreamTargetChat = chatId;
+            db.data.adminSettings.liveStreamTargetChat = body.chatId;
             db.save(true);
         }
 
-        const chatName = targetChat ? ` [Target: ${targetChat}]` : '';
+        const base = {
+            chatId: target,
+            url: body.url,
+            title: body.title,
+            artist: body.artist,
+            duration: body.duration,
+            thumb: body.thumb,
+            requestedBy: 'admin',
+        };
 
-        let statusText = '';
-        if (action === 'join') {
-            statusText = `🟢 **Live Stream Assistant Bot** joined voice chat / live stream session!`;
-            if (targetChat) {
-                const sent = await sendTelegramNotification(targetChat, statusText);
-                if (sent && sent.message_id) {
-                    setTimeout(() => {
-                        try {
-                            const activeBot = bot || getBackupBot();
-                            if (activeBot) activeBot.deleteMessage(targetChat, sent.message_id).catch(() => {});
-                        } catch (e) {}
-                    }, 30 * 60 * 1000);
+        let result;
+        switch (action) {
+            case 'join':
+                result = await livestreamBridge.call('/join', base, settings);
+                break;
+            case 'play':
+                if (!base.url) {
+                    return res.json({
+                        success: false,
+                        message: 'Pick a track first - use Search or paste a link in the player.',
+                    });
                 }
-            }
-            return res.json({ success: true, message: `🟢 Live Stream Assistant Bot joined live stream${chatName}!` });
-        } else if (action === 'play') {
-            const track = query || 'Live Music Stream';
-            statusText = `🎵 **Live Stream Assistant** is now streaming audio: \`${track}\``;
-            if (targetChat) {
-                const sent = await sendTelegramNotification(targetChat, statusText);
-                if (sent && sent.message_id) {
-                    setTimeout(() => {
-                        try {
-                            const activeBot = bot || getBackupBot();
-                            if (activeBot) activeBot.deleteMessage(targetChat, sent.message_id).catch(() => {});
-                        } catch (e) {}
-                    }, 30 * 60 * 1000);
+                result = await livestreamBridge.call('/play', base, settings);
+                break;
+            case 'queue':
+                if (!base.url) {
+                    return res.json({ success: false, message: 'Pick a track to add to the queue.' });
                 }
-            }
-            return res.json({ success: true, message: `🎵 Live Stream Assistant is now streaming audio: ${track}${chatName}` });
-        } else if (action === 'pause') {
-            statusText = `⏸️ **Live Stream Assistant** stream audio paused.`;
-            if (targetChat) {
-                const sent = await sendTelegramNotification(targetChat, statusText);
-                if (sent && sent.message_id) {
-                    setTimeout(() => {
-                        try {
-                            const activeBot = bot || getBackupBot();
-                            if (activeBot) activeBot.deleteMessage(targetChat, sent.message_id).catch(() => {});
-                        } catch (e) {}
-                    }, 30 * 60 * 1000);
+                result = await livestreamBridge.call('/queue', base, settings);
+                break;
+            case 'pause':
+                result = await livestreamBridge.call('/pause', base, settings);
+                break;
+            case 'resume':
+                result = await livestreamBridge.call('/resume', base, settings);
+                break;
+            case 'stop':
+            case 'leave':
+                result = await livestreamBridge.call('/stop', base, settings);
+                break;
+            case 'schedule': {
+                const mins = Number(body.minutes);
+                if (!mins || mins <= 0 || Number.isNaN(mins)) {
+                    return res.json({ success: false, message: 'Enter how many minutes from now it should start.' });
                 }
-            }
-            return res.json({ success: true, message: `⏸️ Stream audio stream paused${chatName}.` });
-        } else if (action === 'stop' || action === 'leave') {
-            statusText = `🛑 **Live Stream Assistant** stream ended & disconnected.`;
-            if (targetChat) {
-                const sent = await sendTelegramNotification(targetChat, statusText);
-                if (sent && sent.message_id) {
-                    setTimeout(() => {
-                        try {
-                            const activeBot = bot || getBackupBot();
-                            if (activeBot) activeBot.deleteMessage(targetChat, sent.message_id).catch(() => {});
-                        } catch (e) {}
-                    }, 30 * 60 * 1000);
+                if (!base.url) {
+                    return res.json({ success: false, message: 'Pick a track to schedule first.' });
                 }
+                result = await livestreamBridge.call('/schedule', { ...base, minutes: mins }, settings);
+                break;
             }
-            return res.json({ success: true, message: `🛑 Stream ended and Assistant Bot disconnected from voice chat${chatName}.` });
+            case 'cancel-schedule':
+                result = await livestreamBridge.call('/cancel-schedule', base, settings);
+                break;
+            case 'status':
+                result = await livestreamBridge.call('/status', base, settings);
+                return res.json({ success: result.ok !== false, ...result });
+            case 'search':
+                result = await livestreamBridge.call('/search', { query: body.query || '' }, settings);
+                return res.json({ success: result.ok !== false, results: result.results || [], ...result });
+            default:
+                return res.json({ success: false, message: 'Unknown action: ' + action });
         }
 
-        res.json({ success: true, message: `Command '${action}' executed successfully${chatName}.` });
+        return res.json({ success: result.ok !== false, ...result });
     } catch (e) {
         console.error('[LIVESTREAM ASSISTANT ACTION ERROR]', e);
-        res.json({ success: false, message: 'Error: ' + e.message });
+        return res.json({ success: false, message: 'Error: ' + e.message });
+    }
+});
+
+// Reports whether the streaming engine is installed and connected.
+app.get('/api/admin/livestream-assistant/health', async (req, res) => {
+    try {
+        const h = await livestreamBridge.health();
+        res.json({ success: true, ...h });
+    } catch (e) {
+        res.json({ success: false, message: e.message });
     }
 });
 
