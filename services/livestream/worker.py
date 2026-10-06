@@ -21,11 +21,16 @@ import asyncio
 import json
 import logging
 import os
+import shutil
+import sys
 import time
 import traceback
 from typing import Any, Dict, List, Optional
 
 from aiohttp import web
+
+# PyTgCalls changed its API between 2.x and 3.x; ptg.py hides that.
+import ptg
 
 LOG = logging.getLogger("livestream")
 
@@ -70,6 +75,11 @@ def status_for(chat_id: Optional[int]) -> Dict[str, Any]:
             "chats": [
                 status_for(c) for c in sorted(set(list(now_playing) + list(queues)))
             ],
+            # What the panel needs to tell "not installed" apart from
+            # "installed but not connected".
+            "stack": _stack_cache(),
+            "ffmpeg": bool(shutil.which("ffmpeg")),
+            "ytDlp": bool(shutil.which("yt-dlp")),
         }
 
     q = queues.get(chat_id, [])
@@ -95,6 +105,23 @@ def set_error(msg: str) -> None:
     LOG.error(msg)
 
 
+# Resolved lazily and cached: the installed packages cannot change while the
+# process runs, but status is polled every few seconds.
+_STACK: Optional[Dict[str, Any]] = None
+
+
+def _stack_cache() -> Dict[str, Any]:
+    global _STACK
+    if _STACK is None:
+        try:
+            info = ptg.probe_sync()
+            info["installed"] = bool(info.get("pytgcalls") and info.get("pyrogram"))
+            _STACK = info
+        except Exception as e:
+            _STACK = {"installed": False, "error": str(e)}
+    return _STACK
+
+
 # ---------------------------------------------------------------------------
 # Audio resolution
 # ---------------------------------------------------------------------------
@@ -107,17 +134,36 @@ async def resolve_audio(url: str) -> Optional[str]:
         # Already a direct audio link.
         return url
 
-    proc = await asyncio.create_subprocess_exec(
-        "yt-dlp", "-g", "-f", "bestaudio", url,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate()
-    if proc.returncode != 0 or not stdout:
-        LOG.warning("yt-dlp failed for %s: %s", url, stderr.decode(errors="ignore")[:200])
-        return None
-    first = stdout.decode(errors="ignore").strip().splitlines()
-    return first[0] if first else None
+    # Prefer the module entry point: the Docker image installs yt-dlp into
+    # /opt/lsdeps via `pip --target`, so its console script does not land on
+    # PATH. Falling back to the plain command keeps a local/system install
+    # working too.
+    attempts = [[sys.executable, "-m", "yt_dlp"], ["yt-dlp"]]
+    last_error = ""
+
+    for cmd in attempts:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, "-g", "-f", "bestaudio", url,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            last_error = f"{cmd[0]} not found"
+            continue
+
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0 or not stdout:
+            last_error = stderr.decode(errors="ignore")[:200]
+            continue
+
+        lines = stdout.decode(errors="ignore").strip().splitlines()
+        if lines:
+            return lines[0]
+        last_error = "yt-dlp returned no URL"
+
+    LOG.warning("yt-dlp failed for %s: %s", url, last_error)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -158,8 +204,6 @@ async def start_client(api_id: int, api_hash: str, session_string: str) -> Dict[
     global client, pytgcalls, pyrogram_ready, pytgcalls_ready, last_error
 
     from pytgcalls import PyTgCalls
-    from pytgcalls.types import Update
-    from pytgcalls.types.input_stream import AudioPiped
 
     c, my_gen, _ = build_clients(api_id, api_hash, session_string)
 
@@ -182,10 +226,8 @@ async def start_client(api_id: int, api_hash: str, session_string: str) -> Dict[
     calls = PyTgCalls(c)
     await calls.start()
 
-    @calls.on_stream_end()
-    async def on_stream_end(client_ref, update: Update):
+    async def _on_stream_end(chat_id: int) -> None:
         # Auto-advance to the next queued track.
-        chat_id = update.chat_id
         if chat_id in paused:
             return
         q = queues.get(chat_id, [])
@@ -195,9 +237,12 @@ async def start_client(api_id: int, api_hash: str, session_string: str) -> Dict[
         else:
             now_playing.pop(chat_id, None)
             try:
-                await calls.leave_group_call(chat_id)
+                await ptg.leave(calls, chat_id)
             except Exception:
                 pass
+
+    # ptg maps this to on_stream_end() on 2.x and on_update() on 3.x.
+    ptg.on_stream_end(calls, _on_stream_end)
 
     client = c
     pytgcalls = calls
@@ -205,7 +250,11 @@ async def start_client(api_id: int, api_hash: str, session_string: str) -> Dict[
     pytgcalls_ready = True
     last_error = ""
     me = await c.get_me()
-    LOG.info("Live Stream userbot connected as @%s", getattr(me, "username", "?"))
+    LOG.info(
+        "Live Stream userbot connected as @%s using %s",
+        getattr(me, "username", "?"),
+        ptg.describe(),
+    )
     return {"ok": True, "username": getattr(me, "username", None), "message": "connected"}
 
 
@@ -259,20 +308,19 @@ async def join_chat(chat_id: int) -> Dict[str, Any]:
 
 async def play_now(chat_id: int, track: Dict[str, Any]) -> Dict[str, Any]:
     """Stream one track into the chat right now."""
-    from pytgcalls.types.input_stream import AudioPiped
-
     ensure_ready()
     stream_url = await resolve_audio(track.get("url", ""))
     if not stream_url:
         raise RuntimeError("Could not resolve an audio stream for this track. Check the link.")
 
-    audio = AudioPiped(stream_url)
+    audio = ptg.make_stream(stream_url)
     try:
-        await pytgcalls.play(chat_id, audio)
+        await ptg.play(pytgcalls, chat_id, audio)
     except Exception:
-        # Some chats need an explicit join before the first play.
+        # Some chats need the helper account to be a member before it can
+        # join the call, so pull it in and try once more.
         await join_chat(chat_id)
-        await pytgcalls.join_group_call(chat_id, audio)
+        await ptg.play(pytgcalls, chat_id, audio)
 
     now_playing[chat_id] = {
         "title": track.get("title", "Unknown"),
@@ -302,12 +350,25 @@ def reply(data: Dict[str, Any], status: int = 200) -> web.Response:
     return web.json_response(data, status=status)
 
 
+async def probe_stack() -> Dict[str, Any]:
+    """Report which Python packages are actually importable.
+
+    Without Pyrogram/PyTgCalls the worker can still serve its control plane,
+    so this is how the panel and the logs tell "not installed" apart from
+    "installed but not connected yet".
+    """
+    return _stack_cache()
+
+
 async def h_health(request: web.Request) -> web.Response:
     return reply({
         "ok": True,
         "pyrogramReady": pyrogram_ready,
         "pytgcallsReady": pytgcalls_ready,
         "lastError": last_error,
+        "stack": await probe_stack(),
+        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "ytDlp": bool(shutil.which("yt-dlp")),
     })
 
 
@@ -395,7 +456,7 @@ async def h_pause(request: web.Request) -> web.Response:
     chat_id = int(body.get("chatId"))
     try:
         ensure_ready()
-        await pytgcalls.pause_stream(chat_id)
+        await ptg.pause(pytgcalls, chat_id)
         paused.add(chat_id)
         return reply({"ok": True, "message": "Stream paused."})
     except Exception as e:
@@ -407,7 +468,7 @@ async def h_resume(request: web.Request) -> web.Response:
     chat_id = int(body.get("chatId"))
     try:
         ensure_ready()
-        await pytgcalls.resume_stream(chat_id)
+        await ptg.resume(pytgcalls, chat_id)
         paused.discard(chat_id)
         return reply({"ok": True, "message": "Stream resumed."})
     except Exception as e:
@@ -425,7 +486,7 @@ async def h_stop(request: web.Request) -> web.Response:
     paused.discard(chat_id)
     try:
         if pytgcalls_ready:
-            await pytgcalls.leave_group_call(chat_id)
+            await ptg.leave(pytgcalls, chat_id)
         return reply({"ok": True, "message": "Stream stopped and helper left the call."})
     except Exception as e:
         return reply({"ok": False, "message": str(e)})

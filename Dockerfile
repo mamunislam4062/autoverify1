@@ -1,16 +1,37 @@
 # ---------------------------------------------------------------------------
 # Auto Verify — production image for Railway / docker-compose
 # ---------------------------------------------------------------------------
+
+# ---- Stage 1: build the Live Stream Assistant Python stack ----------------
+# tgcrypto and py-tgcalls ship native extensions, so they have to be compiled.
+# Building them in a throwaway stage keeps the compiler and the Python
+# headers out of the final image, which would otherwise grow by a few hundred
+# megabytes.
+FROM python:3.12-slim-bookworm AS lsdeps
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        python3-dev \
+        libssl-dev \
+        libffi-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY services/livestream/requirements.txt /tmp/ls-requirements.txt
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir --prefer-binary --target /opt/lsdeps -r /tmp/ls-requirements.txt
+
+# ---- Final image ----------------------------------------------------------
 FROM node:22-bookworm-slim
 
 # Chromium + fonts (Puppeteer drives this at runtime for automation tasks).
-# Installed from Debian so .npmrc's `puppeteer_skip_download=true` can stay on
-# and we don't waste build time/bandwidth downloading a second browser.
+# Installed from Debian so .npmrc's puppeteer_skip_download=true can stay and
+# we don't waste build time/bandwidth downloading a second browser.
 #
-# ffmpeg + python3 are for the Live Stream Assistant worker
-# (services/livestream): PyTgCalls pipes audio through ffmpeg and yt-dlp
-# resolves the track. Without them the admin panel reports that streaming
-# is not installed instead of pretending the stream started.
+# ffmpeg and python3 are runtime needs for the Live Stream Assistant worker:
+# PyTgCalls pipes audio through ffmpeg and yt-dlp resolves the track. The
+# Python packages themselves come from the lsdeps stage above.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         chromium \
@@ -20,14 +41,16 @@ RUN apt-get update \
         ca-certificates \
         ffmpeg \
         python3 \
-        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Live Stream Assistant worker (Pyrogram + PyTgCalls + yt-dlp).
-# Its own layer so source-only changes do not reinstall the stack.
-COPY services/livestream/requirements.txt /tmp/ls-requirements.txt
-RUN python3 -m pip install --no-cache-dir --break-system-packages -r /tmp/ls-requirements.txt \
-    && rm -f /tmp/ls-requirements.txt
+# Prebuilt worker stack (Pyrogram, PyTgCalls, tgcrypto, yt-dlp).
+COPY --from=lsdeps /opt/lsdeps /opt/lsdeps
+
+# Expose yt-dlp as a plain command as well, in case the console script path
+# differs between install methods.
+RUN ln -sf /opt/lsdeps/bin/yt-dlp /usr/local/bin/yt-dlp || true
+
+ENV PYTHONPATH=/opt/lsdeps
 
 # Puppeteer: skip the bundled browser download, point at the system Chromium.
 ENV PUPPETEER_SKIP_DOWNLOAD=true \

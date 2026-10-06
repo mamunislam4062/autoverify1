@@ -16,4 +16,7 @@ __pycache__/
 .vscode/
 .idea/
 *.txt
+# ...but the Live Stream worker's dependency manifest must be committed,
+# otherwise the Docker build cannot COPY it and the build fails on deploy.
+!services/livestream/requirements.txt
 yt-dlp

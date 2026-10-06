@@ -1,0 +1,14 @@
+# Live Stream Assistant worker dependencies.
+#
+# Pyrogram  - the helper (userbot) account that joins chats
+# PyTgCalls - joins the Telegram group call and pipes audio into it
+# yt-dlp    - resolves a track URL to a direct bestaudio stream
+#
+# tgcrypto is optional but recommended: it roughly halves the hashing time,
+# which matters because the helper is a userbot.
+pyrogram>=2.0.106
+tgcrypto>=1.2.5
+py-tgcalls>=2.0.0
+youtube-search>=1.3.7
+yt-dlp>=2024.1.1
+aiohttp>=3.9.0
