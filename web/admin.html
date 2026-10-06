@@ -8828,9 +8828,21 @@
         }
 
         // MOBILE MENU FUNCTIONS
+        //
+        // On wide screens the sidebar is always docked, and the desktop CSS
+        // forces `transform: translateX(0)` plus `display: none` on the
+        // overlay. So toggling `.mobile-open` had no visible effect and the
+        // hamburger looked dead. There it must expand/collapse the sidebar
+        // instead of sliding a drawer in.
         function toggleMobileMenu() {
             const sidebar = document.querySelector('aside');
             const overlay = document.getElementById('sidebarOverlay');
+
+            if (window.matchMedia('(min-width: 1025px)').matches) {
+                toggleSidebarCollapse();
+                return;
+            }
+
             sidebar.classList.toggle('mobile-open');
             overlay.classList.toggle('active');
         }
