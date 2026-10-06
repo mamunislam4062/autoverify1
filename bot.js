@@ -562,8 +562,25 @@ async function initBackupBot() {
 
 async function initAssistantBot() {
     const settings = db.data?.adminSettings?.groupManagement || {};
-    const assistantToken = (settings.userbotSessionString || db.data?.apiKeys?.livestreamBotToken || config.LIVESTREAM_BOT_TOKEN || '').trim();
-    
+
+    // The "Live Stream Bot Token" field is genuinely optional.
+    // A Bot API token looks like "123456789:AA...." - a Pyrogram session
+    // string never does. Previously the session string was preferred and
+    // handed straight to TelegramBot, which only ever returned 401/404, so
+    // leaving the optional token blank silently killed the assistant.
+    // Now a real bot token is used when one exists, otherwise we fall back
+    // to the credentials saved on the same settings card
+    // (App API ID / API Hash / Session String).
+    const assistantBotToken = (
+        settings.livestreamBotToken ||
+        db.data?.apiKeys?.livestreamBotToken ||
+        config.LIVESTREAM_BOT_TOKEN ||
+        ''
+    ).trim();
+    const assistantSession = (settings.userbotSessionString || '').trim();
+    const hasAssistantBotToken = /^\d{5,15}:[A-Za-z0-9_-]{30,}$/.test(assistantBotToken);
+    const hasAssistantSession = assistantSession.length > 0;
+
     // Stop previous assistant bot polling if any
     if (assistantBot && typeof assistantBot.stopPolling === 'function') {
         try {
@@ -573,18 +590,30 @@ async function initAssistantBot() {
             console.warn('[ASSISTANT] Error stopping assistant bot polling:', e.message);
         }
     }
-    
-    if (settings.userbotEnabled !== false && isValidToken(assistantToken)) {
+    assistantBot = null;
+
+    if (settings.userbotEnabled !== false && (hasAssistantBotToken || hasAssistantSession)) {
+        if (!hasAssistantBotToken) {
+            // No external bot token - drive it from the saved userbot session.
+            // The Join / Play / Pause / End buttons are handled by the main bot
+            // (controlLiveStreamAssistant -> /api/admin/livestream-assistant/action),
+            // so they keep working without a second bot account.
+            global.assistantMode = 'session';
+            console.log('[ASSISTANT] No Live Stream Bot Token provided - running on the saved userbot session (App API ID / API Hash / Session String).');
+            return;
+        }
+        global.assistantMode = 'bot-token';
+
         const finalToken = (config.TELEGRAM_BOT_TOKEN || (db.data && db.data.apiKeys && db.data.apiKeys.botToken) || '').trim();
-        if (assistantToken === finalToken && global.botInstance) {
+        if (assistantBotToken === finalToken && global.botInstance) {
             console.log('[ASSISTANT] Assistant Bot Token is same as Main Bot Token. Reusing main bot instance.');
             assistantBot = global.botInstance;
             return;
         }
 
-        console.log('[ASSISTANT] Initializing Live Stream Assistant Bot with token:', assistantToken.slice(0, 10) + '...');
+        console.log('[ASSISTANT] Initializing Live Stream Assistant Bot with token:', assistantBotToken.slice(0, 10) + '...');
         try {
-            assistantBot = new TelegramBot(assistantToken, {
+            assistantBot = new TelegramBot(assistantBotToken, {
                 polling: false,
                 baseApiUrl: config.TELEGRAM_API_BASE || 'https://api.telegram.org'
             });
